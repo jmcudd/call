@@ -5,11 +5,10 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "build": "npm install",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "bin": {
-    "callnow": "server.js"
+    "callnow": "npm install; node server.js"
   },
   "keywords": [
     "webrtc",
