@@ -1,0 +1,138 @@
+const ngrok = require("ngrok");
+const express = require("express");
+const path = require("path");
+const http = require("http");
+const app = express();
+const server = http.createServer(app);
+const io = require("socket.io").listen(server);
+
+// Server all the static files from www folder
+app.use(express.static(path.join(__dirname, "www")));
+
+// Get PORT from env variable else assign 3000 for development
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, null, function () {
+  //console.log("Listening on port " + PORT);
+});
+
+app.get("/legal", (req, res) =>
+  res.sendFile(path.join(__dirname, "www/legal.html"))
+);
+
+// All URL patterns should served with the same file.
+app.get(["/", "/:room"], (req, res) =>
+  res.sendFile(path.join(__dirname, "www/index.html"))
+);
+
+const channels = {};
+const sockets = {};
+
+io.sockets.on("connection", socket => {
+  const socketHostName = socket.handshake.headers.host.split(":")[0];
+
+  socket.channels = {};
+  sockets[socket.id] = socket;
+
+  if (process.env.DEBUG) {
+    console.log("[" + socket.id + "] connection accepted");
+  }
+  socket.on("disconnect", () => {
+    for (const channel in socket.channels) {
+      part(channel);
+    }
+
+    if (process.env.DEBUG) {
+      console.log("[" + socket.id + "] disconnected");
+    }
+    delete sockets[socket.id];
+  });
+
+  socket.on("join", config => {
+    if (process.env.DEBUG) {
+      console.log("[" + socket.id + "] join ", config);
+    }
+    const channel = socketHostName + config.channel;
+
+    // Already Joined
+    if (channel in socket.channels) return;
+
+    if (!(channel in channels)) {
+      channels[channel] = {};
+    }
+
+    for (id in channels[channel]) {
+      channels[channel][id].emit("addPeer", {
+        peer_id: socket.id,
+        should_create_offer: false
+      });
+      socket.emit("addPeer", { peer_id: id, should_create_offer: true });
+    }
+
+    channels[channel][socket.id] = socket;
+    socket.channels[channel] = channel;
+  });
+
+  const part = channel => {
+    // Socket not in channel
+    if (!(channel in socket.channels)) return;
+
+    delete socket.channels[channel];
+    delete channels[channel][socket.id];
+
+    for (id in channels[channel]) {
+      channels[channel][id].emit("removePeer", { peer_id: socket.id });
+      socket.emit("removePeer", { peer_id: id });
+    }
+  };
+
+  socket.on("relayICECandidate", config => {
+    let peer_id = config.peer_id;
+    let ice_candidate = config.ice_candidate;
+
+    if (process.env.DEBUG) {
+      console.log(
+        "[" + socket.id + "] relay ICE-candidate to [" + peer_id + "] ",
+        ice_candidate
+      );
+    }
+
+    if (peer_id in sockets) {
+      sockets[peer_id].emit("iceCandidate", {
+        peer_id: socket.id,
+        ice_candidate: ice_candidate
+      });
+    }
+  });
+
+  socket.on("relaySessionDescription", config => {
+    let peer_id = config.peer_id;
+    let session_description = config.session_description;
+
+    if (process.env.DEBUG) {
+      console.log(
+        "[" + socket.id + "] relay SessionDescription to [" + peer_id + "] ",
+        session_description
+      );
+    }
+
+    if (peer_id in sockets) {
+      sockets[peer_id].emit("sessionDescription", {
+        peer_id: socket.id,
+        session_description: session_description
+      });
+    }
+  });
+});
+function makeid(length) {
+  var result = "";
+  var characters = "abcdefghijklmnopqrstuvwxyz";
+  var charactersLength = characters.length;
+  for (var i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * charactersLength));
+  }
+  return result;
+}
+(async function () {
+  const url = await ngrok.connect(PORT);
+  console.log(`Share this Link: ${url}/${makeid(6)}`);
+})();
