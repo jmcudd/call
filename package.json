@@ -1,5 +1,5 @@
 {
-  "name": "talk",
+  "name": "callnow",
   "version": "1.0.0",
   "description": "A free video call app for the web.",
   "main": "server.js",

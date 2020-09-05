@@ -1,4 +1,4 @@
-# Call
+# Callnow
 
 ## A free group video call app with screen sharing.
 
@@ -7,7 +7,7 @@ It is built using WebRTC, so all your video chat is peer-to-peer. Group video ca
 ### Make a Call
 
 ```
-npx call
+npx callnow
 ```
 
 ### Fork of Talk
@@ -16,7 +16,7 @@ This project is a fork of Talk(https://github.com/vasanthv/talk).
 
 - Google Analytics have been removed for privacy.
 - Ngrok has been added for a convenient way of exposing the local server to the public internet.
-- Published to NPM so the project can be run with one command. `npx call`
+- Published to NPM so the project can be run with one command. `npx callnow`
 
 ### Prerequisites:
 
