@@ -1,6 +1,6 @@
 {
   "name": "callnow",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "A free video call app for the web.",
   "main": "server.js",
   "scripts": {
